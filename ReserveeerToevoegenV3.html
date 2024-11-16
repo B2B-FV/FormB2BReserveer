@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toevoegen reservatie
+script met blokeren verzenden zo niet alle velden ingevuld
+ook wordt uur niet gewist bij Wissen of Verzenden
+Geen melding ontvangen</title>
+	  
+<style>
+    body {
+  	width: 100%;
+  	height: auto;
+  	margin: 0;
+  	padding: 0;
+  	background: rgb(210,210,210);
+  	font-family: calibri, Open Sans, sans serif;
+/*display: grid;*/
+  	display: grid;
+  	justify-content: center;
+	}
+/* Algemene stijlen voor het formulier */
+   	form {
+    font-family: Calibri, sans-serif;
+	}
+
+#form_container {
+ 	max-width: 600px;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+	box-sizing: border-box;
+	}
+
+/* Stijlen voor labels en invoervelden */
+label, input, select, textarea {
+    height: 25px;
+    line-height: 20px; /* Verplaatst de labels verticaal */
+    font-size: 12px;
+    display: inline-block;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+/* Stijlen voor de blokken */
+.block {
+    margin-bottom: 5px; /* Verklein de afstand tussen de blokken */
+}
+/* Stijlen voor de Datum, Uur en Veld */
+.block input[type="text"] {
+    width: 20px;
+    margin: 0 2px;
+}
+.block input[type="date"] {
+    width: 110px;
+    margin: 0 2px;
+	text-align: left;
+}
+.block select[type="text"] {
+    width: 80px;
+    margin: 0 2px;
+	text-align: center;
+}
+/* Specifieke stijlen voor invoervelden */
+input, select, textarea {
+    width: calc(100% - 5px); /* Zorgt voor ruimte voor padding en margin */
+    padding: 2px 10px;
+    margin: 5px 0;
+}
+/* Specifieke stijlen voor het Poule label en invoerveld*/
+label[for="Poule"], select[name="Poule"], select[name="Ploeg1"], select[name="Ploeg2"]{
+    display: inline-block;
+    vertical-align: left;
+	margin-left: 5px; /* Optioneel: ruimte tussen label en invoerveld */
+}
+label[for="Labels"] {
+width: 50px;
+}
+select[name="Poule"], [name="Ploeg1"], [name="Ploeg2"]{
+width: 250px;
+}
+/* Specifieke stijlen voor het invoerveld Opmerkingen */
+textarea[name="Opmerkingen"] {
+    height: 50px;
+}
+#title {
+  width: 100%;
+  text-align: center;
+  font-family: allura;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  color: white;
+  text-shadow: 1px 1px 2px #292929, -1px -1px 0.5px #292929;
+}
+.errorMessages {
+  width: calc(100% - 8px);
+  padding: 20px 0;
+  background: #e74c3c;
+  color: white;
+  border: 2px solid #EC644B;
+  display: none;
+}
+.errorMessages li {
+  padding: 0 0 5px 0;
+  margin: 0 0 0 30px;
+  font-family: Open Sans, sans serif;
+}
+input.isRequired {
+  border: 2px solid #e74c3c;
+}
+button {
+  border: none;
+  background: #56DB31;
+  width: 100px;
+  height: 35px;
+  padding: 0;
+  margin-top: 0px;
+  cursor: pointer;
+  box-shadow: 1px 1px 1px #292929, -1px -1px 1px #B2B2B2;
+  border-radius: 5px;
+  transition: all .3s;
+  color: white;
+  font-weight: 700;
+  text-align: center;
+}
+button:hover {
+  background: #2980b9;
+}
+button:focus {
+  box-shadow: 1px 1px 1px #B2B2B2, -1px -1px 1px #292929;
+}
+</style>
+  
+  <script>
+    // Functie om de ploegen op te halen op basis van de gekozen poule
+    function updateTeams() {
+      var poule = document.getElementById('poule').value;
+      
+      // Controleer of een poule is geselecteerd
+      if (!poule) {
+        return; // Als geen poule geselecteerd is, doe verder niets
+      }
+
+      // Haal de ploegen op via een fetch-aanroep naar Google Apps Script
+      fetch('https://script.google.com/macros/s/AKfycbwuiUVXD8mE2ICuL6HQUtB75JtmRc2RISWfftkSy0T3loJA2rcE8mkLXl9WMqCEKwWq/exec?poule=' + poule)
+        .then(response => response.json()) // Converteer naar JSON
+        .then(data => {
+          // Vul de dropdowns voor ploeg1 en ploeg2 met de opgehaalde ploegen
+          var ploeg1Select = document.getElementById('ploeg1');
+          var ploeg2Select = document.getElementById('ploeg2');
+          
+          ploeg1Select.innerHTML = '<option value="">Selecteer een ploeg</option>';
+          ploeg2Select.innerHTML = '<option value="">Selecteer een ploeg</option>';
+          
+          // Voeg de ploegen toe aan de dropdowns
+          data.teams.forEach(function(team) {
+            var option1 = document.createElement('option');
+            option1.value = team;
+            option1.text = team;
+            ploeg1Select.appendChild(option1);
+
+            var option2 = document.createElement('option');
+            option2.value = team;
+            option2.text = team;
+            ploeg2Select.appendChild(option2);
+          });
+        })
+        .catch(error => {
+          console.error('Er ging iets mis:', error);
+        });
+    }
+	
+	// Functie om de dropdown voor de uren bij te werken op basis van de geselecteerde datum
+    function updateDropdown() {
+      var date = new Date(document.getElementById('datumField').value);
+      var day = date.getDay(); // 0 is zondag, 1 is maandag, ..., 5 is vrijdag, 6 is zaterdag
+      var dropdown = document.getElementById('uurField');
+      dropdown.innerHTML = ''; // Verwijder bestaande opties
+
+      var options;
+      if (day === 5) { // Vrijdag
+        options = ["18:00", "19:30"];
+      } else if (day === 6 || day === 0 || day === 1) { // Zaterdag, Zondag of Maandag
+        options = ["13:30", "15:00", "16:30", "18:00"];
+      } else {
+        options = ['Geen'];
+      }
+
+      options.forEach(function(opt) {
+        var optionElement = document.createElement('option');
+        optionElement.value = opt;
+        optionElement.text = opt;
+        dropdown.appendChild(optionElement);
+      });
+    }
+	
+	window.onload = function() {
+            resetForm();
+        };
+	
+  </script>
+</head>
+  <body>
+<iframe sandbox="allow-forms allow-same-origin allow-scripts allow-modals" style="display:none;"></iframe>
+
+	 <div id="form_container">
+<h1 id="title">FORM RESERVATIES <font color="#FFF947">VBV</font></h1></p>
+<p><font color="#FF1810">* Verplichte velden</font></p>
+<form id="addForm">
+
+<div class="block">
+	<label for="Labels"><b>Poule <font color="#FF1810">*</font>:</b></label>
+    <select id="poule" name="Poule" onchange="updateTeams()" required>
+      <option value="">Selecteer een poule</option>
+      <option value="1">Poule 1 - DD1</option>
+      <option value="2">Poule 2 - DD2</option>
+      <option value="3">Poule 3 - DG1</option>
+      <option value="4">Poule 4 - DG2</option>
+      <option value="5">Poule 5 - DH1</option>
+      <option value="6">Poule 6 - DH2</option>
+      <option value="7">Poule 7 - DH3</option>
+	</select>    
+ </div>
+ 
+<!--Input Ploeg 1-->	
+	<div class="block">
+        <label for="Labels"><b>Ploeg 1 <font color="#FF1810">*</font>:</b></label>
+        <select id="ploeg1" name="Ploeg1" required defaultValue="">
+            <option value="">Selecteer ploeg 1</option>
+        </select>
+    </div>
+<!--Input Ploeg 2>-->
+	<div class="block">
+        <label for="Labels"><b>Ploeg 2 <font color="#FF1810">*</font>:</b></label>
+        <select id="ploeg2" name="Ploeg2" required defaultValue="">
+            <option value="">Selecteer ploeg 2</option>
+        </select>
+    </div><br>
+
+<!--Input Datum  Uur Veld-->
+<div class="block">
+	    <label for="Labels"><b>Datum <font color="#FF1810">*</font>:</b></label>
+        <input type="date" id="datumField" name="Datum" onchange="updateDropdown()" defaultValue="" required>
+        	
+		<label><b>Uur <font color="#FF1810">*</font>:</b></label>
+        <select type="text" id="uurField" name="Uur" defaultValue="" required>
+          <option value="">Uur</option> <!-- Opties zullen hier worden toegevoegd door het script -->
+        </select>
+</div>
+<div class="block"> 
+ 	  <label for="Labels"><b>Veld <font color="#FF1810">*</font>: </b></label>
+        <select type="text" id="veldField" name="Veld" value="" required>>
+        <option value=""></option>
+		<option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+    	</select>
+</div><br>
+<!--Input Opmerkingen--> 	  
+	  <div>
+	  <textarea id="OpM" maxlength="40" name="Opmerkingen" placeholder="Opmerkingen" defaultValue=""></textarea>
+	  </div><br>
+	  
+	  <input type="hidden" name="Action" value="Add">
+         
+	  <div align="center">
+	  <button type="submit" onclick="submitForm()">Verstuur</button>
+	  <button type="reset" onclick="resetForm()">Wissen</button>
+	  </div>
+</form>
+</div>
+    <script>
+      
+	  function resetForm() {
+      document.getElementById("addForm").reset();
+      }
+  
+	  function submitForm() {
+        var form = document.getElementById('addForm');
+        // Verkrijg het formulier en de velden
+		
+        var poule = document.getElementById('poule').value;  // Pas aan met je werkelijke veld-id's
+    	var ploeg1 = document.getElementById('ploeg1').value; // Pas aan met je werkelijke veld-id's
+    	var ploeg2 = document.getElementById('ploeg2').value; // Pas aan met je werkelijke veld-id's
+	 	var datum = document.getElementById('datumField').value;  // Pas aan met je werkelijke veld-id's
+    	var uur = document.getElementById('uurField').value; // Pas aan met je werkelijke veld-id's
+    	var veld = document.getElementById('veldField').value; // Pas aan met je werkelijke veld-id's
+    
+	// Controleer of de vereiste velden zijn ingevuld
+    if (poule === "" || ploeg1 === "" || ploeg2 === "" || datum === ""  || uur === ""  || veld === "") {
+	   alert("Alle velden behalve Opmerkingen moeten ingevuld zijn!");
+       return false;  // Stop de uitvoering van de functie als velden leeg zijn
+  }
+		// Als alle velden zijn ingevuld, ga verder met het verzenden van het formulier
+		
+		var formData = new FormData(form);
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://script.google.com/macros/s/AKfycbxGTONWsR3MO7JCfm9_wC4CCxpfQQbErie9afhQs5t5pNXRO2P511_fRpy_UtCARSPusA/exec');
+        		
+		xhr.send(formData);
+        xhr.onload = function() {
+          alert(xhr.responseText);
+        }
+      }
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('addForm');
+    if (form) {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();  // Voorkom de standaardactie
+        // Voeg je aangepaste handelingen toe hier (zoals data verzenden via AJAX)
+        alert('De reservatie werd toegevoegd');
+        form.reset();  // Reset het formulier na het verzenden
+      });
+    }
+  });
+</script>
+
+
+  </body>
+</html>
